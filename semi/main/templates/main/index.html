@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <title>반도체 공정 탐험</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      font-family: sans-serif;
+    }
+
+    #map {
+      position: relative;
+      width: 2560px;
+      height: 100vh;
+      background: url("{% static 'img/back.png' %}") no-repeat center center;
+      background-size: cover;
+    }
+
+    .zone {
+      position: absolute;
+      width: 300px;  /* 이미지 크기 증가 */
+      height: 300px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      background-color: #e0e0ff;
+      top: 100px;
+    }
+
+    /* 순서대로 왼쪽에서 오른쪽 */
+    #zone-oxidation  { left: 100px; }
+    #zone-photo      { left: 820px; }
+    #zone-etching    { left: 1540px; }
+    #zone-deposition { left: 2260px; }
+
+    /* 히트박스 스타일 */
+    .hitbox {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+    }
+
+    #character {
+      position: absolute;
+      width: 160px;
+      height: 220px;
+      background: url("{% static 'img/students.png' %}") no-repeat center/contain;
+      background-size: cover;
+      top: 350px;
+      left: 100px;
+      transition: left 0.08s linear, top 0.08s linear;
+      transform: scaleX(1); /* 기본 방향 */
+    }
+
+    .label {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div class="label">공정실 입구 - 캐릭터를 이동하세요</div>
+    <img id="zone-oxidation" src="{% static 'img/oxidation.png' %}" alt="산화" style="position: absolute; width: 300px; height: 300px; top: 250px; left: 100px;">
+    <img id="zone-photo" src="{% static 'img/photo.png' %}" alt="포토" style="position: absolute; width: 300px; height: 300px; top: 250px; left: 820px;">
+    <img id="zone-etching" src="{% static 'img/etching.png' %}" alt="에칭" style="position: absolute; width: 300px; height: 300px; top: 250px; left: 1540px;">
+    <img id="zone-deposition" src="{% static 'img/deposition.png' %}" alt="증착" style="position: absolute; width: 300px; height: 300px; top: 250px; left: 2260px;">
+    <div id="character"></div>
+  </div>
+
+  <script>
+    const char = document.getElementById('character');
+    const zones = {
+      oxidation: document.getElementById('zone-oxidation'),
+      photo: document.getElementById('zone-photo'),
+      etching: document.getElementById('zone-etching'),
+      deposition: document.getElementById('zone-deposition')
+    };
+
+    let x = 100, y = 350;
+    const step = 15;
+    const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    let animationFrameId = null;
+
+    function updatePosition() {
+      const minY = 250; // 능선 높이까지 허용
+      const maxY = window.innerHeight - char.offsetHeight;
+
+      if (keys.ArrowUp) y = Math.max(minY, y - step);
+      if (keys.ArrowDown) y = Math.min(maxY, y + step);
+      if (keys.ArrowLeft) {
+        x = Math.max(0, x - step);
+        char.style.transform = 'scaleX(1)';
+      }
+      if (keys.ArrowRight) {
+        x = Math.min(2560 - char.offsetWidth, x + step);
+        char.style.transform = 'scaleX(-1)';
+      }
+
+      char.style.left = `${x}px`;
+      char.style.top = `${y}px`;
+
+      const screenWidth = window.innerWidth;
+      const characterCenter = x + (char.offsetWidth / 2);
+      
+      window.scrollTo({
+        left: characterCenter - (screenWidth / 2),
+        behavior: 'auto'
+      });
+
+      const charRect = char.getBoundingClientRect();
+
+      for (const [key, zone] of Object.entries(zones)) {
+        const rect = zone.getBoundingClientRect();
+        const zoneCenter = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        const charCenter = {
+          x: charRect.left + charRect.width / 2,
+          y: charRect.top + charRect.height / 2
+        };
+
+        // 중앙 100x100 영역에서만 충돌 체크
+        const isColliding = 
+          Math.abs(charCenter.x - zoneCenter.x) < 50 &&
+          Math.abs(charCenter.y - zoneCenter.y) < 50;
+
+        if (isColliding) {
+          window.location.href = `/${key}/`;
+        }
+      }
+
+      if (Object.values(keys).some(key => key)) {
+        animationFrameId = requestAnimationFrame(updatePosition);
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (keys.hasOwnProperty(e.key)) {
+        keys[e.key] = true;
+        if (!animationFrameId) {
+          animationFrameId = requestAnimationFrame(updatePosition);
+        }
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      if (keys.hasOwnProperty(e.key)) {
+        keys[e.key] = false;
+        if (!Object.values(keys).some(key => key)) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
