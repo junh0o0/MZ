@@ -1,0 +1,76 @@
+#=======================================================================
+#                       Initialization
+#=======================================================================
+
+  units            metal
+  boundary         p p f
+  atom_modify      map yes
+  newton           on
+#====================== Structure ======================================  
+  read_data        ./slab.data
+#====================== Potential ======================================
+  pair_style       mace no_domain_decomposition
+  pair_coeff       * * ./mace.model-lammps.pt Si O
+
+  
+  mass 2 15.999
+  mass 1 28.085
+
+
+#=======================================================================
+#                       Minimization
+#=======================================================================
+#  dump            dump_minimization all custom 1 bulk_minimization.lammpstrj id type x y z 
+
+#  thermo          1
+#  min_style       cg
+
+#  minimize        1e-10 1e-12 1000 10000
+#  undump          dump_minimization
+#  write_restart   bulk_minimization.restart
+
+#  reset_timestep  1
+
+#=======================================================================
+#                       NVE/Langevin - equilibrate at 300K
+#=======================================================================
+  thermo          10
+  thermo_style    custom step temp pe ke etotal press 
+
+  group		       oxygen  type 2
+  group	 	       silicon type 1
+
+  region mobile block INF INF INF INF 6 INF
+  group mobile region mobile
+  group silicon_mobile intersect mobile silicon
+
+
+  velocity oxygen set 0.0 0.0 -0.2 units box
+
+  fix 2 silicon_mobile langevin 300 1100 10.0 587283
+  fix 3 silicon_mobile nve
+  fix 4 oxygen langevin 300 1100 10.0 12345
+  fix 5 oxygen nve
+
+
+  dump 1 all custom 10 dump.oxidation.xyz id type x y z vx vy vz
+  run 20000
+
+  undump 1
+  write_data oxidation.SiO2
+
+#----------------------------- Run simulation ---------------------------------#
+#
+#    # Setup output
+#  thermo          ${output} 			#because it is realaxation
+#  thermo_style    custom step tpcpu pe ke vol press temp #record these value (custom setting)
+#  dump            mydump all custom 1 dump.traj id type x y z fx fy fz
+#  dump_modify     mydump sort id
+#
+#  fix f1 all nve
+#  fix               comfix all momentum 1 linear 1 1 1
+#  velocity        all create ${T} 1 dist gaussian mom yes
+#
+#  run 5
+#
+#------------------------------------------------------------------------------#

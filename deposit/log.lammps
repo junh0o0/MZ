@@ -1,0 +1,117 @@
+LAMMPS (28 Mar 2023 - Development)
+  using 1 OpenMP thread(s) per MPI task
+##=======================================================================
+#                       Initialization
+#=======================================================================
+
+  units            metal
+  boundary         p p f
+  atom_modify      map yes
+  newton           on
+#====================== Structure ======================================
+  read_data        ./cl_si.data
+Reading data file ...
+  orthogonal box = (0 0 0) to (49.050004 49.050004 20.900002)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  1296 atoms
+  read_data CPU = 0.004 seconds
+#====================== Potential ======================================
+  pair_style       mace no_domain_decomposition
+  pair_coeff       * * ./mace.model-lammps.pt Si O
+
+  mass 1 28.095
+  mass 2 26.981
+
+  region dummy_o block 0 0 0 0 100 100 units box
+  create_atoms 2 single 0 0 100 units box
+Created 0 atoms
+  using box units in orthogonal box = (0 0 0) to (49.050004 49.050004 20.900002)
+  create_atoms CPU = 0.000 seconds
+  delete_atoms region dummy_o
+Deleted 0 atoms, new total = 1296
+
+
+  group		       addatoms type 2
+0 atoms in group addatoms
+  region           mobile block INF INF INF INF 6 INF
+  group		       mobile region mobile
+486 atoms in group mobile
+
+  compute		   add addatoms temp
+  compute_modify   add dynamic/dof yes extra/dof 0
+
+  fix		       1 addatoms nve
+  fix		       2 mobile langevin 300 500 10 587283
+  fix		       3 mobile nve
+
+  region           slab block 0 40 0 40 17 18
+  fix		       4 addatoms deposit 100 2 50 12345 region slab vz -5.0 -5.0
+  fix		       5 addatoms wall/reflect zhi EDGE
+
+  thermo_style	   custom step atoms temp epair etotal press
+  thermo           100
+  thermo_modify	   temp add
+WARNING: Temperature for thermo pressure is not for group all (src/thermo.cpp:521)
+
+  dump 1 all custom 10 dump.oxidation.xyz id type x y z
+  run              10000
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 14
+  ghost atom cutoff = 14
+  binsize = 7, bins = 8 8 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair mace, perpetual
+      attributes: full, newton on
+      pair build: full/bin/atomonly
+      stencil: full/bin/3d
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.995 | 5.995 | 5.995 Mbytes
+   Step        Atoms         Temp          E_pair         TotEng         Press     
+         0        1296   0             -6474.988      -6474.988      -9083.8346    
+       100        1298   270.42204     -6479.2896     -6479.2197     -7984.4544    
+       200        1300   270.42204     -6511.084      -6510.9442     -7876.1646    
+       300        1302   929.18128     -6514.8651     -6514.1445     -8944.689     
+       400        1304   2644.897      -6528.8778     -6526.1428     -5789.4658    
+       500        1306   1014.4721     -6535.5543     -6534.243      -8529.1589    
+       600        1308   587.80205     -6534.4621     -6533.5504     -9508.5788    
+       700        1310   775.42512     -6542.1873     -6540.7841     -5225.4523    
+       800        1312   1402.3801     -6547.2656     -6544.3653     -7683.1299    
+       900        1314   2808.7632     -6553.3497     -6546.8146     -9392.9875    
+      1000        1316   3569.2357     -6570.4836     -6561.2564     -6470.9797    
+      1100        1318   3348.6218     -6579.2351     -6569.7125     -6804.5669    
+      1200        1320   2787.2223     -6578.5184     -6569.8718     -8945.0754    
+      1300        1322   2658.5736     -6593.5866     -6584.6518     -6563.4378    
+      1400        1324   3158.0367     -6599.9736     -6588.5438     -7361.7512    
+      1500        1326   3776.6665     -6610.189      -6595.5439     -8750.9441    
+      1600        1328   3287.3864     -6614.8124     -6601.2147     -8011.2741    
+      1700        1330   4870.1434     -6637.3461     -6615.9426     -7416.0676    
+      1800        1332   5327.5777     -6648.3938     -6623.6026     -8938.8794    
+      1900        1334   3510.9081     -6646.8272     -6629.5821     -8207.0726    
+      2000        1336   3179.1655     -6651.6721     -6635.2345     -8268.5512    
+      2100        1338   2691.4473     -6660.5084     -6645.8967     -7959.0999    
+      2200        1340   2955.5287     -6667.572      -6650.7626     -7321.1562    
+      2300        1342   4047.7784     -6685.0738     -6661.0059     -7162.8939    
+      2400        1344   2738.3266     -6686.2544     -6669.2645     -8128.1193    
+      2500        1346   3194.7634     -6695.1361     -6674.4883     -8342.186     
+      2600        1348   2858.4274     -6708.7745     -6689.5615     -7091.5802    
+      2700        1350   3746.4707     -6721.142      -6694.9915     -9361.9559    
+      2800        1352   3723.4453     -6734.5489     -6707.5965     -8581.4485    
+      2900        1354   3908.5528     -6741.4261     -6712.1233     -7967.7667    
+      3000        1356   3447.354      -6752.6899     -6725.9536     -8297.7666    
+      3100        1358   3647.3459     -6760.8164     -6731.5861     -8260.6437    
+      3200        1360   3389.3768     -6773.778      -6745.7388     -9282.9545    
+      3300        1362   3038.2017     -6784.7425     -6758.8231     -8798.6802    
+      3400        1364   3432.4475     -6787.1251     -6756.955      -9647.5852    
+      3500        1366   4227.1088     -6808.5684     -6770.3206     -8305.271     
+      3600        1368   3249.2432     -6804.8674     -6774.6276     -9517.7773    
+      3700        1370   3296.7668     -6820.7747     -6789.2403     -9683.4248    
+      3800        1372   2653.5761     -6819.0068     -6792.9387     -9712.9762    
+      3900        1374   3214.649      -6843.4669     -6811.0558     -7370.9647    
+      4000        1376   2861.304      -6840.2696     -6810.6814     -10958.069    
+      4100        1378   3698.8293     -6868.8061     -6829.601      -11298.554    
+ERROR: Lost atoms: original 1380 current 1379 (src/thermo.cpp:482)
+Last command:   run              10000

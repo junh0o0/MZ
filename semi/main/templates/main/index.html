@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <title>반도체 공정 탐험</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    #map {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #ffffff;
+    }
+
+    .zone {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      background-color: #e0e0ff;
+      top: 100px;
+    }
+
+    
+    #zone-oxidation  { left: 100px; }
+    #zone-photo      { left: 520px; }
+    #zone-etching    { left: 940px; }
+    #zone-deposition { left: 760px; }
+
+    #character {
+      position: absolute;
+      width: 160px;
+      height: 220px;
+      background: url("{% static 'img/students.png' %}") no-repeat center/contain;
+      background-size: cover;
+      top: 350px;
+      left: 100px
+      transition: left 0.1s, top 0.1s;
+      transform: scaleX(1);
+    }
+
+    .label {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div class="label">공정실 입구 - 캐릭터를 이동하세요</div>
+    <div id="zone-oxidation" class="zone">산화</div>
+    <div id="zone-photo" class="zone">포토</div>
+    <div id="zone-etching" class="zone">에칭</div>
+    <div id="zone-deposition" class="zone">증착</div>
+    <div id="character"></div>
+  </div>
+
+  <script>
+    const char = document.getElementById('character');
+    const zones = {
+      oxidation: document.getElementById('zone-oxidation'),
+      photo: document.getElementById('zone-photo'),
+      etching: document.getElementById('zone-etching'),
+      deposition: document.getElementById('zone-deposition')
+    };
+
+    let x = 100, y = 350;
+    char.style.left = `${x}px`;
+    char.style.top = `${y}px`;
+    const step = 50;
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp') y -= step;
+      if (e.key === 'ArrowDown') y += step;
+      if (e.key === 'ArrowLeft') {
+        x -= step;
+        char.style.transform = 'scaleX(1)'; 
+      }
+      if (e.key === 'ArrowRight') {
+        x += step;
+        char.style.transform = 'scaleX(-1)'; 
+      }
+
+      char.style.left = `${x}px`;
+      char.style.top = `${y}px`;
+
+      const charRect = char.getBoundingClientRect();
+
+      for (const [key, zone] of Object.entries(zones)) {
+        const rect = zone.getBoundingClientRect();
+
+        const isColliding = !(
+          charRect.right < rect.left ||
+          charRect.left > rect.right ||
+          charRect.bottom < rect.top ||
+          charRect.top > rect.bottom
+        );
+
+        if (isColliding) {
+          window.location.href = `/${key}/`;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

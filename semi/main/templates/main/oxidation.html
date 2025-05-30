@@ -1,0 +1,229 @@
+{% load static %}
+
+<style>
+  body, html {
+    height: 100%;
+    margin: 0;
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .mol-container {
+    width: 600px;
+    height: 600px;
+    border: 1px solid #ccc;
+    position: relative;
+    margin-bottom: 30px;
+  }
+
+  .chat-box {
+    width: 1600px;
+    height: 400px;
+    border: 1px solid #aaa;
+    border-radius: 10px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-log {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  .chat-input-area {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .chat-input-area input {
+    flex: 1;
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .chat-input-area button {
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .controls button {
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .exit-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: background-color 0.3s;
+  }
+
+  .exit-button:hover {
+    background-color: #d93a3a;
+  }
+</style>
+
+<div class="container">
+  <button class="exit-button" onclick="window.location.href='/'">🏠 처음으로</button>
+
+  <div class="mol-container" id="viewer"></div>
+
+  <div class="chat-box">
+    <div class="chat-log" id="chatLog">
+      <div><strong>GPT:</strong> 궁금한 점을 입력해보세요!</div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="userInput" placeholder="질문을 입력하세요..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+    <div class="controls">
+      <button onclick="startAnimation()">▶ 재생</button>
+      <button onclick="pauseAndSendFrameToGPT()">⏸ 정지</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+
+<script>
+let viewer;
+let currentFrame = 0;
+let maxFrames = 0;
+let animationInterval = null;
+
+fetch("{% static 'traj/oxidation_final.xyz' %}")
+  .then(res => res.text())
+  .then(data => {
+    viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
+    viewer.addModelsAsFrames(data, "xyz");
+    viewer.setStyle({}, { sphere: { colorscheme: "Jmol" } });
+    viewer.zoomTo();
+    viewer.render();
+    maxFrames = 200; // 
+    startAnimation();
+  });
+
+function startAnimation() {
+  if (animationInterval) clearInterval(animationInterval);
+  animationInterval = setInterval(() => {
+    viewer.setFrame(currentFrame);
+    viewer.render();
+    currentFrame = (currentFrame + 1) % maxFrames;
+  }, 100);
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const chatLog = document.getElementById('chatLog');
+  const userMessage = input.value.trim();
+
+  if (!userMessage) return;
+
+  chatLog.innerHTML += `<div><strong>나:</strong> ${userMessage}</div>`;
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  const loading = document.createElement('div');
+  loading.innerHTML = `<strong>GPT:</strong> ...답변을 생성 중입니다...`;
+  chatLog.appendChild(loading);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  fetch("/ai_chat/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken")
+    },
+    body: JSON.stringify({ message: userMessage })
+  })
+  .then(res => res.json())
+  .then(data => {
+    loading.innerHTML = `<strong>GPT:</strong> ${data.reply}`;
+    chatLog.scrollTop = chatLog.scrollHeight;
+  });
+
+  input.value = '';
+}
+
+function pauseAndSendFrameToGPT() {
+  clearInterval(animationInterval);
+
+  const atoms = viewer.selectedAtoms({ frame: currentFrame });
+  const xyz = atoms.map(atom =>
+    `${atom.elem} ${atom.x.toFixed(6)} ${atom.y.toFixed(6)} ${atom.z.toFixed(6)}`
+  ).join("\n");
+
+  const chatLog = document.getElementById('chatLog');
+  chatLog.innerHTML += `<div><strong>나:</strong> (프레임 ${currentFrame}의 구조를 설명해줘)</div>`;
+
+  const loading = document.createElement('div');
+  loading.innerHTML = `<strong>GPT:</strong> ...답변을 생성 중입니다...`;
+  chatLog.appendChild(loading);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  const message = `[프레임 ${currentFrame}]의 원자 구조입니다:\n\n${xyz}\n\n이 구조에서 일어날 수 있는 반응이나 원자 재배열 양상을 분석해 주세요.`;
+
+  fetch("/ai_chat/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken")
+    },
+    body: JSON.stringify({ message })
+  })
+  .then(res => res.json())
+  .then(data => {
+    loading.innerHTML = `<strong>GPT:</strong> ${data.reply}`;
+    chatLog.scrollTop = chatLog.scrollHeight;
+  })
+  .catch(err => {
+    loading.innerHTML = `<strong>GPT:</strong> 오류가 발생했습니다: ${err}`;
+    chatLog.scrollTop = chatLog.scrollHeight;
+  });
+}
+</script>
