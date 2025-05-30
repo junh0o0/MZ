@@ -5,7 +5,7 @@ import json
 import openai
 
 
-openai.api_key = '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'
+openai.api_key = 
 # Create your views here.
 def index(request):
     return render(request,'main/index.html')
